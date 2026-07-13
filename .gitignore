@@ -1,0 +1,15 @@
+node_modules
+dist
+dist-ssr
+*.local
+*.tsbuildinfo
+
+# ffmpeg.wasm core is copied from node_modules by scripts/setup-core.mjs
+public/ffmpeg/
+
+# editor / OS
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+*.log
+npm-debug.log*

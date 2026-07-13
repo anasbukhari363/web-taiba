@@ -1,0 +1,31 @@
+{
+  "name": "web-taiba",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Taiba Video Editor — a 100% browser-based video editor powered by ffmpeg.wasm. No uploads, no watermark, fully private.",
+  "scripts": {
+    "setup-core": "node scripts/setup-core.mjs",
+    "predev": "node scripts/setup-core.mjs",
+    "prebuild": "node scripts/setup-core.mjs",
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "e2e": "npm run build && node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "@ffmpeg/ffmpeg": "^0.12.15",
+    "@ffmpeg/util": "^0.12.2",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
+  },
+  "devDependencies": {
+    "@ffmpeg/core": "^0.12.10",
+    "@types/react": "^19.1.0",
+    "@types/react-dom": "^19.1.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "playwright": "1.49",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}
