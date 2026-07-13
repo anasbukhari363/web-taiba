@@ -133,13 +133,19 @@ a {
   object-fit: cover;
 }
 
+.overlay-scrim {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  pointer-events: none;
+}
 .overlay-preview {
   position: absolute;
   left: 0;
   right: 0;
   display: flex;
   justify-content: center;
-  padding: 4cqh 4cqw;
+  padding: 8cqh 6cqw;
   pointer-events: none;
 }
 .overlay-preview.pos-top {
@@ -152,13 +158,45 @@ a {
 .overlay-preview.pos-bottom {
   bottom: 0;
 }
-.overlay-preview span {
-  font-weight: 700;
-  line-height: 1.2;
-  padding: 0.3em 0.5em;
+.cap {
+  font-weight: 800;
+  line-height: 1.25;
+  padding: 0.2em 0.45em;
   border-radius: 0.2em;
   text-align: center;
   max-width: 90%;
+}
+.cap.bd-box {
+  background: rgba(0, 0, 0, 0.55);
+}
+.cap.bd-none {
+  text-shadow: 0 0 3px rgba(0, 0, 0, 0.8), 0 1px 4px rgba(0, 0, 0, 0.8);
+}
+.cap.anim-fade {
+  animation: capFade 0.6s ease both;
+}
+.cap.anim-pop {
+  animation: capPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+.cap.anim-slide {
+  animation: capSlide 0.6s ease both;
+}
+@keyframes capFade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes capPop {
+  from {
+    opacity: 0;
+    transform: scale(0.7);
+  }
+}
+@keyframes capSlide {
+  from {
+    opacity: 0;
+    transform: translateY(0.6em);
+  }
 }
 
 .meta-row {
@@ -323,13 +361,36 @@ a {
   gap: 10px;
   margin-top: 12px;
 }
-.stack input[type='text'] {
+.stack input[type='text'],
+.stack textarea {
   background: var(--panel-2);
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 9px 11px;
   color: var(--text);
   font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+.field-label {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.preset {
+  margin-top: 10px;
+  width: 100%;
+  background: rgba(109, 94, 252, 0.14);
+  border: 1px solid var(--accent);
+  color: var(--accent-2);
+  padding: 8px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.preset:hover {
+  background: rgba(109, 94, 252, 0.24);
 }
 .inline {
   display: flex;

@@ -5,7 +5,12 @@ import {
   type OutputFormat,
   type ProcessResult,
 } from './lib/ffmpeg'
-import { renderOverlayPng, type OverlayPosition } from './lib/overlay'
+import {
+  renderOverlayFrames,
+  type OverlayAnimation,
+  type OverlayBackdrop,
+  type OverlayPosition,
+} from './lib/overlay'
 
 type Dims = { w: number; h: number }
 
@@ -54,10 +59,11 @@ export default function App() {
 
   const [textEnabled, setTextEnabled] = useState(false)
   const [text, setText] = useState('')
-  const [textPos, setTextPos] = useState<OverlayPosition>('bottom')
+  const [textPos, setTextPos] = useState<OverlayPosition>('center')
   const [textColor, setTextColor] = useState('#ffffff')
-  const [textSize, setTextSize] = useState(6)
-  const [textBg, setTextBg] = useState(true)
+  const [textSize, setTextSize] = useState(8)
+  const [textBackdrop, setTextBackdrop] = useState<OverlayBackdrop>('screen')
+  const [textAnim, setTextAnim] = useState<OverlayAnimation>('fade')
 
   const [busy, setBusy] = useState(false)
   const [progress, setProgress] = useState(0)
@@ -119,13 +125,21 @@ export default function App() {
     try {
       let overlay = null
       if (textEnabled && text.trim() && format !== 'mp3') {
-        setStatusMsg('Menyiapkan teks…')
-        const png = await renderOverlayPng(
-          { text, position: textPos, color: textColor, sizePct: textSize, background: textBg },
+        setStatusMsg('Menyiapkan animasi teks…')
+        const { frames, fps } = await renderOverlayFrames(
+          {
+            text,
+            position: textPos,
+            color: textColor,
+            sizePct: textSize,
+            backdrop: textBackdrop,
+            animation: textAnim,
+          },
           dims.w,
           dims.h,
+          Math.max(0.1, trimEnd - trimStart),
         )
-        overlay = { text, pngBlob: png }
+        overlay = { frames, fps }
       }
 
       setStatusMsg('Memproses video di browser…')
@@ -198,18 +212,18 @@ export default function App() {
                 className={aspect.ratio ? 'cropped' : ''}
               />
               {textEnabled && text.trim() && (
-                <div className={`overlay-preview pos-${textPos}`}>
-                  <span
-                    style={{
-                      color: textColor,
-                      fontSize: `${textSize}cqh`,
-                      background: textBg ? 'rgba(0,0,0,0.55)' : 'transparent',
-                      textShadow: textBg ? 'none' : '0 1px 3px rgba(0,0,0,0.8)',
-                    }}
-                  >
-                    {text}
-                  </span>
-                </div>
+                <>
+                  {textBackdrop === 'screen' && <div className="overlay-scrim" />}
+                  <div className={`overlay-preview pos-${textPos}`}>
+                    <span
+                      key={`${textAnim}-${text}-${textPos}-${textSize}-${textBackdrop}`}
+                      className={`cap anim-${textAnim} bd-${textBackdrop}`}
+                      style={{ color: textColor, fontSize: `${textSize}cqh` }}
+                    >
+                      {text}
+                    </span>
+                  </div>
+                </>
               )}
             </div>
             <div className="meta-row">
@@ -263,7 +277,7 @@ export default function App() {
               </div>
             </Group>
 
-            <Group title="Teks / Caption">
+            <Group title="Teks beranimasi / Quote">
               <label className="switch">
                 <input
                   type="checkbox"
@@ -272,15 +286,69 @@ export default function App() {
                 />
                 <span>Tambahkan teks di video</span>
               </label>
+              <button
+                className="preset"
+                onClick={() => {
+                  setTextEnabled(true)
+                  setTextPos('center')
+                  setTextSize(9)
+                  setTextBackdrop('screen')
+                  setTextAnim('pop')
+                  if (!text.trim()) setText('Tulis quote-mu di sini')
+                }}
+              >
+                ✨ Pakai preset Quote
+              </button>
               {textEnabled && (
                 <div className="stack">
-                  <input
-                    type="text"
-                    placeholder="Tulis teks di sini…"
+                  <textarea
+                    placeholder="Tulis teks / quote di sini…"
                     value={text}
-                    maxLength={120}
+                    maxLength={160}
+                    rows={2}
                     onChange={(e) => setText(e.target.value)}
                   />
+
+                  <span className="field-label">Animasi</span>
+                  <div className="chips">
+                    {(
+                      [
+                        ['fade', 'Fade in'],
+                        ['pop', 'Pop'],
+                        ['slide', 'Slide up'],
+                        ['none', 'Tanpa'],
+                      ] as [OverlayAnimation, string][]
+                    ).map(([a, label]) => (
+                      <button
+                        key={a}
+                        className={a === textAnim ? 'chip active' : 'chip'}
+                        onClick={() => setTextAnim(a)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <span className="field-label">Latar</span>
+                  <div className="chips">
+                    {(
+                      [
+                        ['screen', 'Layar gelap'],
+                        ['box', 'Kotak'],
+                        ['none', 'Outline'],
+                      ] as [OverlayBackdrop, string][]
+                    ).map(([b, label]) => (
+                      <button
+                        key={b}
+                        className={b === textBackdrop ? 'chip active' : 'chip'}
+                        onClick={() => setTextBackdrop(b)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  <span className="field-label">Posisi</span>
                   <div className="chips">
                     {(['top', 'center', 'bottom'] as OverlayPosition[]).map((p) => (
                       <button
@@ -292,6 +360,7 @@ export default function App() {
                       </button>
                     ))}
                   </div>
+
                   <div className="inline">
                     <label>
                       Warna
@@ -306,20 +375,12 @@ export default function App() {
                       <input
                         type="range"
                         min={3}
-                        max={12}
+                        max={14}
                         value={textSize}
                         onChange={(e) => setTextSize(Number(e.target.value))}
                       />
                     </label>
                   </div>
-                  <label className="switch small">
-                    <input
-                      type="checkbox"
-                      checked={textBg}
-                      onChange={(e) => setTextBg(e.target.checked)}
-                    />
-                    <span>Latar gelap di belakang teks</span>
-                  </label>
                 </div>
               )}
             </Group>

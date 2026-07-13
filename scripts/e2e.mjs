@@ -102,9 +102,12 @@ try {
   }, { timeout: 10000 })
   console.log('→ editor loaded, video metadata read')
 
-  // Enable a text overlay + crop to 9:16 + 1.5x to exercise filter_complex.
+  // Animated caption (frame-sequence overlay) + crop 9:16 + 1.5x speed to
+  // exercise the full filter_complex + image-sequence overlay path.
   await page.getByText('Tambahkan teks di video').click()
-  await page.fill('input[placeholder="Tulis teks di sini…"]', 'Taiba test ✅')
+  await page.fill('textarea[placeholder="Tulis teks / quote di sini…"]', 'Taiba quote ✅')
+  await page.getByRole('button', { name: 'Pop', exact: true }).click()
+  await page.getByRole('button', { name: 'Layar gelap' }).click()
   await page.getByRole('button', { name: '9:16 (Reels/TikTok)' }).click()
   await page.getByRole('button', { name: '1.5×' }).click()
 

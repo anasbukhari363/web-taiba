@@ -26,9 +26,9 @@ export const ASPECT_RATIOS: AspectRatio[] = [
 ]
 
 export type TextOverlay = {
-  text: string
-  /** transparent PNG already rendered at the source video's dimensions */
-  pngBlob: Blob
+  /** animation frames (transparent PNGs at source dimensions) + their framerate */
+  frames: Blob[]
+  fps: number
 }
 
 export type ProcessOptions = {
@@ -167,11 +167,16 @@ export async function processVideo(
 
   const inputName = 'input' + guessExt(opts.file)
   const outputName = 'output.' + extOf(opts.format)
-  const overlayName = 'overlay.png'
+  const overlayPattern = 'ov%04d.png'
+  const overlayNames: string[] = []
 
   await engine.writeFile(inputName, await fetchFile(opts.file))
   if (opts.overlay) {
-    await engine.writeFile(overlayName, await fetchFile(opts.overlay.pngBlob))
+    for (let i = 0; i < opts.overlay.frames.length; i++) {
+      const name = `ov${String(i).padStart(4, '0')}.png`
+      await engine.writeFile(name, await fetchFile(opts.overlay.frames[i]))
+      overlayNames.push(name)
+    }
   }
 
   const hasAudio = await probeHasAudio(engine, inputName)
@@ -191,7 +196,9 @@ export async function processVideo(
   const args: string[] = []
   args.push('-ss', opts.trimStart.toFixed(3)) // seek before input (fast)
   args.push('-i', inputName)
-  if (opts.overlay) args.push('-i', overlayName)
+  if (opts.overlay) {
+    args.push('-framerate', String(opts.overlay.fps), '-start_number', '0', '-i', overlayPattern)
+  }
   args.push('-t', duration.toFixed(3))
 
   if (opts.format === 'mp3') {
@@ -201,14 +208,14 @@ export async function processVideo(
   } else if (opts.format === 'gif') {
     const gifChain = [...vFilters, 'fps=15']
     const complex = opts.overlay
-      ? `[0:v][1:v]overlay=0:0[ov];[ov]${gifChain.join(',')},split[a][b];[a]palettegen[p];[b][p]paletteuse`
+      ? `[0:v][1:v]overlay=0:0:eof_action=repeat[ov];[ov]${gifChain.join(',')},split[a][b];[a]palettegen[p];[b][p]paletteuse`
       : `${gifChain.join(',')},split[a][b];[a]palettegen[p];[b][p]paletteuse`
     args.push('-filter_complex', complex)
   } else {
     // Video: mp4 / webm.
     if (opts.overlay) {
       const vchain = vFilters.length ? ',' + vFilters.join(',') : ''
-      let complex = `[0:v][1:v]overlay=0:0${vchain}[outv]`
+      let complex = `[0:v][1:v]overlay=0:0:eof_action=repeat${vchain}[outv]`
       if (audioSpeed) complex += `;[0:a]${audioSpeed}[outa]`
       args.push('-filter_complex', complex)
       args.push('-map', '[outv]')
@@ -242,7 +249,7 @@ export async function processVideo(
 
   await safeDelete(engine, inputName)
   await safeDelete(engine, outputName)
-  if (opts.overlay) await safeDelete(engine, overlayName)
+  for (const name of overlayNames) await safeDelete(engine, name)
 
   const baseName = opts.file.name.replace(/\.[^.]+$/, '') || 'video'
   return {
