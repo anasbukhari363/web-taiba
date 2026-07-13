@@ -1,7 +1,6 @@
 // Produces a real screenshot: runs the quote-video export, then grabs a frame
 // from the *exported* MP4 so we can visually confirm the baked-in caption.
 import { spawn } from 'node:child_process'
-import { writeFile } from 'node:fs/promises'
 import { chromium } from 'playwright'
 
 const CHROME = process.env.CHROME_PATH || chromium.executablePath()
@@ -73,23 +72,17 @@ try {
   await page.getByRole('button', { name: 'Pakai preset Quote' }).click()
   await page.fill('textarea', 'Mulai dari yang kecil,\nmulai dari sekarang.')
   await page.getByRole('button', { name: '9:16 (Reels/TikTok)' }).click()
+  await page.getByRole('button', { name: '480p' }).click()
+  // Export to GIF so the baked-in caption is visible without an H.264 decoder
+  // (headless Chromium can't decode H.264, but GIF is universal).
+  await page.getByRole('button', { name: /^GIF/ }).click()
   await page.getByRole('button', { name: 'Export video' }).click()
-  await page.waitForSelector('.result video', { timeout: 180000 })
-  console.log('→ export done, grabbing a frame from the exported MP4…')
+  await page.waitForSelector('.result img', { timeout: 180000 })
+  console.log('→ export done, screenshotting the exported GIF…')
 
-  const frame = await page.evaluate(async () => {
-    const v = document.querySelector('.result video')
-    await new Promise((res) => {
-      v.addEventListener('seeked', res, { once: true })
-      v.currentTime = Math.min(1.0, (v.duration || 2) * 0.6)
-    })
-    const c = document.createElement('canvas')
-    c.width = v.videoWidth
-    c.height = v.videoHeight
-    c.getContext('2d').drawImage(v, 0, 0)
-    return c.toDataURL('image/png').split(',')[1]
-  })
-  await writeFile(OUT, Buffer.from(frame, 'base64'))
+  // Let the GIF paint a mid-animation frame, then snapshot the element.
+  await page.waitForTimeout(1200)
+  await page.locator('.result img').screenshot({ path: OUT })
   console.log('→ saved', OUT)
 
   await browser.close()
